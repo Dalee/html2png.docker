@@ -9,10 +9,12 @@ const PORT = 1481,
 
 const logger = require('morgan');
 const {Builder, Capabilities} = require('selenium-webdriver');
-var {parse} = require('querystring');
+const {parse} = require('querystring');
 
 app.set('query parser', (qs, sep, eq, options) => {
-    qs = qs.replace(/\+/g, '%2B'); // save plus symbol from decode
+    if (qs) {
+        qs = qs.replace(/\+/g, '%2B'); // save plus symbol from decode
+    }
     return parse(qs, sep, eq, options);
 });
 
@@ -34,9 +36,10 @@ app.all('/convert', async (req, res, next) => {
         return next(new Error('No URL specified'));
     }
 
-    const driver = await new Builder().withCapabilities(Capabilities.phantomjs()).build();
+    let driver;
 
     try {
+        driver = await new Builder().withCapabilities(Capabilities.phantomjs()).build();
         driver.manage().window().setSize(w, h); // resize window
         driver.get(q);
         const image = await driver.takeScreenshot();
@@ -44,7 +47,7 @@ app.all('/convert', async (req, res, next) => {
     } catch (e) {
         next(e);
     } finally {
-        driver.quit();
+        driver && await driver.close();
     }
 
 });
