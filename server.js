@@ -47,7 +47,7 @@ app.all('/convert', async (req, res, next) => {
     } catch (e) {
         next(e);
     } finally {
-        driver && await driver.close();
+        driver && await driver.quit();
     }
 
 });
