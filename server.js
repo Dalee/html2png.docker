@@ -1,76 +1,59 @@
 'use strict';
 
+process.setMaxListeners(0);
+
 const PORT = 1481,
     HOST = '0.0.0.0',
     express = require('express'),
-    crypto = require('crypto'),
-    execa = require('execa'),
-    fs = require("fs"),
     app = express();
 
 const logger = require('morgan');
-const fetch = require('node-fetch');
-const {withFile} = require('tmp-promise');
+const {Builder, Capabilities} = require('selenium-webdriver');
+var {parse} = require('querystring');
+
+app.set('query parser', (qs, sep, eq, options) => {
+    qs = qs.replace(/\+/g, '%2B'); // save plus symbol from decode
+    return parse(qs, sep, eq, options);
+});
 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({
-    extended: false
+    extended: false,
 }));
 
-const downloadFile = (async (url, path) => {
-    const res = await fetch(url);
-    const fileStream = fs.createWriteStream(path);
-    await new Promise((resolve, reject) => {
-        res.body.pipe(fileStream);
-        res.body.on("error", (err) => {
-            reject(err);
-        });
-        fileStream.on("finish", function () {
-            resolve();
-        });
-    });
-});
-
-app.all('/', function (req, res, next) {
-    function send(file) {
-        res.sendFile(file, {
-            headers: {
-                'Content-Type': 'image/png'
-            }
-        });
+app.all('/convert', async (req, res, next) => {
+    function send(body) {
+        res.contentType('image/png');
+        res.send(body);
     }
 
-    const {q, bg, force} = req.query || {};
+    const {q, w = 640, h = 480} = req.query || {};
 
     if (!q) {
         return next(new Error('No URL specified'));
     }
 
-    let hash = crypto.createHash('md5').update(req.originalUrl).digest("hex");
-    const storageLocation = `/tmp/storage/${hash}`;
+    const driver = await new Builder().withCapabilities(Capabilities.phantomjs()).build();
 
-    // cached file
-    if (!force && fs.existsSync(storageLocation)) {
-        return send(storageLocation);
+    try {
+        driver.manage().window().setSize(w, h); // resize window
+        driver.get(q);
+        const image = await driver.takeScreenshot();
+        send(Buffer.from(image, 'base64'));
+    } catch (e) {
+        next(e);
+    } finally {
+        driver.quit();
     }
-
-    withFile(async ({path}) => {
-            // when this function returns or throws - release the file
-            await downloadFile(q, path);
-            const {stdout} = await execa('rsvg-convert', ['-f', 'png', path, '-o', storageLocation, '-b', bg || 'None']);
-            send(storageLocation);
-        },
-        {dir: '/tmp/downloads'}
-    ).catch(e => next(e));
 
 });
 
 app.get('*', (req, res) => {
-    res.send('svg2png proxy server');
+    res.send('html2png proxy server');
 });
 
-app.use(function (err, req, res, next) {
+app.use((err, req, res/*, next*/) => {
     res.status(err.status || 500);
     res.json({
         error: err.message

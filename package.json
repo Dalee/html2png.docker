@@ -1,16 +1,14 @@
 {
-  "name": "@dalee/svg2png.docker",
-  "version": "1.0.0",
-  "description": "SVG to PNG generator web proxy",
+  "name": "@dalee/html2png.docker",
+  "version": "1.0.1",
+  "description": "HTML to PNG generator web proxy",
   "main": "server.js",
   "dependencies": {
-    "debug": "~2.6.9",
-    "execa": "^2.0.3",
-    "express": "~4.16.0",
+    "debug": "^4.1.1",
+    "express": "^4.17.1",
     "morgan": "~1.9.0",
-    "node-fetch": "^2.6.0",
     "npm-run-all": "^4.1.5",
-    "tmp-promise": "^2.0.2"
+    "selenium-webdriver": "^3.6.0"
   },
   "scripts": {
     "start": "run-s init server",
@@ -19,15 +17,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Dalee/svg2png.docker.git"
+    "url": "git+https://github.com/Dalee/html2png.docker.git"
   },
   "keywords": [
-    "svg2png"
+    "html2png",
+    "proxy"
   ],
   "author": "Dalee IA <dev@dalee.ru>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Dalee/svg2png.docker/issues"
+    "url": "https://github.com/Dalee/html2png.docker/issues"
   },
-  "homepage": "https://github.com/Dalee/svg2png.docker#readme"
+  "homepage": "https://github.com/Dalee/html2png.docker#readme"
 }
