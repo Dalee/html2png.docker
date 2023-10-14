@@ -2,26 +2,29 @@
 
 process.setMaxListeners(0);
 
-const PORT = 1481,
-    HOST = '0.0.0.0',
+const PORT = +process.env.PORT || 8888,
+    HOST = process.env.HOST || '0.0.0.0',
     numCPUs = require('os').cpus().length,
     express = require('express'),
     app = express();
 
 const logger = require('morgan');
-const {Builder, Capabilities} = require('selenium-webdriver');
+const {Builder, Browser} = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
 const {parse} = require('querystring');
 
 const genericPool = require('generic-pool');
 
-const PhantomFactory = {
-    create: () => new Builder().withCapabilities(Capabilities.phantomjs()).build(),
+const BrowserFactory = {
+    create: () => new Builder().forBrowser(Browser.CHROME)
+        .setChromeOptions(new chrome.Options().headless())
+        .build(),
     destroy: (client) => client.quit(),
 };
 
-const phantomPool = genericPool.createPool(PhantomFactory, {
-    max: +process.env.PHANTOM_POOL_SIZE_MAX || numCPUs * 2,
-    min: +process.env.PHANTOM_POOL_SIZE_MIN || 0,
+const browserPool = genericPool.createPool(BrowserFactory, {
+    max: +process.env.BROWSER_POOL_SIZE_MAX || numCPUs * 2,
+    min: +process.env.BROWSER_POOL_SIZE_MIN || 1,
     softIdleTimeoutMillis: 30 * 1000, // idle objects to be removed after this timeout if pool size > min
     idleTimeoutMillis: 180 * 1000, // all idle objects to be removed after this timeout
     evictionRunIntervalMillis: 15 * 1000,
@@ -29,7 +32,7 @@ const phantomPool = genericPool.createPool(PhantomFactory, {
 
 });
 
-phantomPool.on('factoryCreateError', (err) => console.error('factoryCreateError', err))
+browserPool.on('factoryCreateError', (err) => console.error('factoryCreateError', err))
     .on('factoryDestroyError', (err) => console.error('factoryDestroyError', err));
 
 app.set('query parser', (qs, sep, eq, options) => {
@@ -60,14 +63,14 @@ app.all('/convert', async (req, res, next) => {
     let driver;
 
     try {
-        driver = await phantomPool.acquire();
-        driver.manage().window().setSize(w, h); // resize window
+        driver = await browserPool.acquire();
+        await driver.manage().window().setSize({width: +w, height: +h}); // resize window
         driver.get(q);
         const image = await driver.takeScreenshot();
-        phantomPool.release(driver);
         send(Buffer.from(image, 'base64'));
+        await browserPool.release(driver);
     } catch (e) {
-        driver && phantomPool.destroy(driver);
+        driver && await browserPool.destroy(driver);
         return next(e);
     }
 });

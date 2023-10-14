@@ -1,0 +1,24 @@
+version: "4.7"
+services:
+  chrome:
+    image: selenium/standalone-chrome:latest
+    shm_size: 2gb
+    networks:
+      - screen_shooter_net
+
+  html2png_server:
+    image: dalee/html2png.docker:latest
+    build: .
+    depends_on:
+      - chrome
+    environment:
+      - SELENIUM_REMOTE_URL=http://chrome:4444/wd/hub
+      - PORT=8888
+      - NODE_ENV=production
+    networks:
+      - screen_shooter_net
+    ports:
+      - "8888:8888"
+
+networks:
+  screen_shooter_net:
