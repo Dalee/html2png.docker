@@ -1,20 +1,30 @@
 version: "4.7"
 services:
-  chrome:
+  browser:
     image: selenium/standalone-chrome:latest
+    restart: unless-stopped
     shm_size: 2gb
+    environment:
+      - START_XVFB=false
+      - SE_NODE_MAX_SESSIONS=8
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_START_VNC=false
     networks:
       - screen_shooter_net
 
   html2png_server:
     image: dalee/html2png.docker:latest
-    build: .
+    restart: unless-stopped
+    init: true
+    #build: .
     depends_on:
-      - chrome
+      - browser
     environment:
-      - SELENIUM_REMOTE_URL=http://chrome:4444/wd/hub
+      - SELENIUM_REMOTE_URL=http://browser:4444/wd/hub
       - PORT=8888
       - NODE_ENV=production
+      - BROWSER_POOL_SIZE_MAX=8
+      #- BROWSER_POOL_SIZE_MIN=1
     networks:
       - screen_shooter_net
     ports:
