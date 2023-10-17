@@ -21,7 +21,9 @@ const genericPool = require('generic-pool');
 const BrowserFactory = {
     create: () => new Builder()
         .forBrowser(Browser.CHROME)
-        .setChromeOptions(new Options().addArguments('--headless=new', '--hide-scrollbars'))
+        .setChromeOptions(new Options().addArguments('--headless', '--hide-scrollbars',
+            '--no-sandbox', '--disable-gpu', '--disable-extensions', '--disable-dev-shm-usage',
+            '--mute-audio'))
         .build(),
     destroy: (client) => client.quit(),
 };
